@@ -145,31 +145,31 @@ class MAX30102:
             print("Chưa khởi tạo MicroSD. Dữ liệu sẽ không được lưu.")
 
     def start_measurement(self):
-            """
-            Bắt đầu đo.
-            """
-            self.measurement_start_time = time.ticks_ms()
-            self.red_buffer = []
-            self.ir_buffer = []
-            print("Bắt đầu đo...")
+        """
+        Bắt đầu đo.
+        """
+        self.measurement_start_time = time.ticks_ms()
+        self.red_buffer = []
+        self.ir_buffer = []
+        print("Bắt đầu đo...")
     
-        def stop_measurement(self):
-            """
-            Dừng đo.
+    def stop_measurement(self):
+        """
+        Dừng đo.
+
+        Returns:
+            tuple: Thời gian đo (giây), nhịp tim, SpO2, nhịp tim dự đoán.
+        """
+        measurement_duration = time.ticks_diff(time.ticks_ms(), self.measurement_start_time) / 1000
+        hr = self.calculate_heart_rate()
+        spo2 = self.calculate_spo2()
+        nn_hr = self.predict_heart_rate([self.red_buffer[-1], self.ir_buffer[-1]])
+        print(f"Dừng đo. Thời gian: {measurement_duration:.2f} giây, HR: {hr}, SpO2: {spo2}, NN HR: {nn_hr}")
+        return measurement_duration, hr, spo2, nn_hr
     
-            Returns:
-                tuple: Thời gian đo (giây), nhịp tim, SpO2, nhịp tim dự đoán.
-            """
-            measurement_duration = time.ticks_diff(time.ticks_ms(), self.measurement_start_time) / 1000
-            hr = self.calculate_heart_rate()
-            spo2 = self.calculate_spo2()
-            nn_hr = self.predict_heart_rate([self.red_buffer[-1], self.ir_buffer[-1]])
-            print(f"Dừng đo. Thời gian: {measurement_duration:.2f} giây, HR: {hr}, SpO2: {spo2}, NN HR: {nn_hr}")
-            return measurement_duration, hr, spo2, nn_hr
-    
-        def toggle_display_mode(self):
-            """
-            Chuyển đổi chế độ hiển thị (đồ thị/số liệu).
-            """
-            self.display_graph = not self.display_graph
-            print(f"Chế độ hiển thị: {'Đồ thị' if self.display_graph else 'Số liệu'}")
+    def toggle_display_mode(self):
+        """
+        Chuyển đổi chế độ hiển thị (đồ thị/số liệu).
+        """
+        self.display_graph = not self.display_graph
+        print(f"Chế độ hiển thị: {'Đồ thị' if self.display_graph else 'Số liệu'}")
