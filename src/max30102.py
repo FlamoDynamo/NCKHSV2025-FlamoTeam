@@ -5,7 +5,8 @@ import time
 import numpy as np
 import csv
 import joblib
-from microsd import MicroSD  # Import lớp MicroSD
+from microsd import MicroSD
+from scipy.signal import wiener  # Import hàm lọc Wiener
 
 class MAX30102:
     def __init__(self, i2c, addr=0x57, microsd=None):
@@ -52,9 +53,14 @@ class MAX30102:
 
     def read_sensor(self):
         red, ir = self.read_fifo()
-        self.red_buffer.append(red)
-        self.ir_buffer.append(ir)
-        return {'red': red, 'ir': ir}
+        
+        # Áp dụng lọc Wiener
+        red_filtered = wiener(red)
+        ir_filtered = wiener(ir)
+
+        self.red_buffer.append(red_filtered)
+        self.ir_buffer.append(ir_filtered)
+        return {'red': red_filtered, 'ir': ir_filtered}
 
     def kalman_filter(self, data):
         n_iter = len(data)
@@ -124,15 +130,46 @@ class MAX30102:
             return self.nn_model.predict([data])[0]
         return None
 
-    def save_data(self, filename, data):
+    def save_data(self, filename, data, timestamp):
         """
         Lưu dữ liệu vào file CSV.
 
         Args:
             filename (str): Tên file CSV (ví dụ: 'sensor_data.csv').
             data (list): Dữ liệu cần lưu.
+            timestamp (str): Thời gian đo.
         """
         if self.microsd:
-            self.microsd.save_data(filename, data)
+            self.microsd.save_data(filename, [timestamp] + data)  # Thêm timestamp vào dữ liệu
         else:
             print("Chưa khởi tạo MicroSD. Dữ liệu sẽ không được lưu.")
+
+    def start_measurement(self):
+            """
+            Bắt đầu đo.
+            """
+            self.measurement_start_time = time.ticks_ms()
+            self.red_buffer = []
+            self.ir_buffer = []
+            print("Bắt đầu đo...")
+    
+        def stop_measurement(self):
+            """
+            Dừng đo.
+    
+            Returns:
+                tuple: Thời gian đo (giây), nhịp tim, SpO2, nhịp tim dự đoán.
+            """
+            measurement_duration = time.ticks_diff(time.ticks_ms(), self.measurement_start_time) / 1000
+            hr = self.calculate_heart_rate()
+            spo2 = self.calculate_spo2()
+            nn_hr = self.predict_heart_rate([self.red_buffer[-1], self.ir_buffer[-1]])
+            print(f"Dừng đo. Thời gian: {measurement_duration:.2f} giây, HR: {hr}, SpO2: {spo2}, NN HR: {nn_hr}")
+            return measurement_duration, hr, spo2, nn_hr
+    
+        def toggle_display_mode(self):
+            """
+            Chuyển đổi chế độ hiển thị (đồ thị/số liệu).
+            """
+            self.display_graph = not self.display_graph
+            print(f"Chế độ hiển thị: {'Đồ thị' if self.display_graph else 'Số liệu'}")
