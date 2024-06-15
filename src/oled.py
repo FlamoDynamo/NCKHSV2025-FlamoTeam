@@ -81,6 +81,15 @@ class OLEDDisplay(MAX30102):
             y2 = 63 - int(self.data_buffer[i][0] / 200 * 63)
             self.oled.line(x1, y1, x2, y2, 1)
 
+        # Vẽ đồ thị SpO2 (dùng nét đứt)
+        for i in range(1, len(self.data_buffer)):
+            if i % 2 == 0:  # Vẽ nét đứt
+                x1 = i - 1
+                y1 = 63 - int(self.data_buffer[i - 1][1] / 100 * 63)  # Chia tỷ lệ trục tung
+                x2 = i
+                y2 = 63 - int(self.data_buffer[i][1] / 100 * 63)
+                self.oled.line(x1, y1, x2, y2, 1)
+
     def display_history_data(self):
         """
         Hiển thị dữ liệu lịch sử.
