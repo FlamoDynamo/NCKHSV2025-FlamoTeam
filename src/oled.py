@@ -41,10 +41,11 @@ class OLEDDisplay(MAX30102):
         self.oled.fill(0)
 
         if self.current_mode == "measurement":
-            if self.display_graph:
-                self.display_graph_data(hr, spo2)
-            else:
-                self.display_numerical_data(hr, spo2, nn_hr)
+            if self.is_measuring: # Chỉ hiển thị dữ liệu khi đang đo
+                if self.display_graph:
+                    self.display_graph_data(hr, spo2)
+                else:
+                    self.display_numerical_data(hr, spo2, nn_hr)
         elif self.current_mode == "history":
             self.display_history_data()
 
@@ -154,21 +155,29 @@ def main():
     data_file = 'sensor_data.csv'
 
     while True:
-        data = max30102.read_sensor()  # Sử dụng max30102.read_sensor()
-        print("RED:", data['red'], "IR:", data['ir'])
+        if oled_display.current_mode == "measurement":
+            if oled_display.is_measuring:
+                data = max30102.read_sensor()
+                print("RED:", data['red'], "IR:", data['ir'])
+                if len(max30102.ir_buffer) >= 100:
+                    oled_display.hr = max30102.calculate_heart_rate()
+                    oled_display.spo2 = max30102.calculate_spo2()
+                    oled_display.nn_hr = max30102.predict_heart_rate([data['red'], data['ir']])
+                    print("Heart Rate:", oled_display.hr, "SpO2:", oled_display.spo2, "NN Heart Rate:", oled_display.nn_hr)
+
+                    # Cảnh báo
+                    if oled_display.hr < 40 or oled_display.hr > 120:
+                        oled_display.buzzer.beep()
+                    if oled_display.spo2 < 90:
+                        oled_display.buzzer.beep(duty_cycle=768)  # Âm lượng 75%
+                    elif oled_display.spo2 < 92 and oled_display.hr < 40:
+                        oled_display.buzzer.beep()
+                    elif oled_display.spo2 < 95 and oled_display.hr >= 40:
+                        oled_display.buzzer.beep()
+
+                    max30102.red_buffer = []
+                    max30102.ir_buffer = []
         
-        if len(max30102.ir_buffer) >= 100:
-            hr = max30102.calculate_heart_rate()
-            spo2 = max30102.calculate_spo2()
-            nn_hr = max30102.predict_heart_rate([data['red'], data['ir']])
-            print("Heart Rate:", hr, "SpO2:", spo2, "NN Heart Rate:", nn_hr)
-
-            max30102.save_data(data_file, [data['red'], data['ir'], hr, spo2, nn_hr])
-            oled_display.display_data(hr, spo2, nn_hr)
-
-            max30102.red_buffer = []
-            max30102.ir_buffer = []
-
         oled_display.button_manager.check_events()
         oled_display.display_data(oled_display.hr, oled_display.spo2, oled_display.nn_hr)
         time.sleep(0.1)
