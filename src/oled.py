@@ -37,38 +37,39 @@ def main():
     i2c_oled = SoftI2C(scl=Pin(4), sda=Pin(5))
     adc_pin = 34  # Thay đổi chân ADC cho phù hợp
     charge_status_pin = 13  # Thay đổi chân GPIO cho phù hợp
-    oled_display = OLEDDisplay(i2c_max30102, i2c_oled, adc_pin, charge_status_pin)
-
-    data_file = 'sensor_data.csv'
-
+    
     # Khởi tạo MicroSD (thay đổi chân GPIO cho phù hợp)
     microsd = MicroSD(spi_id=1, sck_pin=14, mosi_pin=13, miso_pin=12, cs_pin=15)
     microsd.mount()  # Mount thẻ nhớ
 
-    # ... (Khởi tạo MAX30102)
+    # Khởi tạo MAX30102 với microsd
     max30102 = MAX30102(i2c_max30102, microsd=microsd)
+    
+    # Khởi tạo OLEDDisplay với max30102 đã có microsd
+    oled_display = OLEDDisplay(i2c_max30102, i2c_oled, adc_pin, charge_status_pin)
+
+    data_file = 'sensor_data.csv'
 
     while True:
-        data = oled_display.read_sensor()
+        data = max30102.read_sensor()  # Sử dụng max30102.read_sensor()
         print("RED:", data['red'], "IR:", data['ir'])
-        if len(oled_display.ir_buffer) >= 100:
-            hr = oled_display.calculate_heart_rate()
-            spo2 = oled_display.calculate_spo2()
-            nn_hr = oled_display.predict_heart_rate([data['red'], data['ir']])
+        
+        if len(max30102.ir_buffer) >= 100:
+            hr = max30102.calculate_heart_rate()
+            spo2 = max30102.calculate_spo2()
+            nn_hr = max30102.predict_heart_rate([data['red'], data['ir']])
             print("Heart Rate:", hr, "SpO2:", spo2, "NN Heart Rate:", nn_hr)
 
-            oled_display.save_data(data_file, [data['red'], data['ir'], hr, spo2, nn_hr])
+            max30102.save_data(data_file, [data['red'], data['ir'], hr, spo2, nn_hr])
             oled_display.display_data(hr, spo2, nn_hr)
 
-            oled_display.red_buffer = []
-            oled_display.ir_buffer = []
+            max30102.red_buffer = []
+            max30102.ir_buffer = []
 
-        # ... (Lưu dữ liệu)
-        max30102.save_data('sensor_data.csv', [data['red'], data['ir'], hr, spo2, nn_hr])
         time.sleep(0.1)
       
-        # ... (Cuối chương trình)
-        microsd.unmount()  # Unmount thẻ nhớ
+    # ... (Đưa microsd.unmount() ra ngoài vòng lặp while)
+    microsd.unmount()  # Unmount thẻ nhớ
 
 if __name__ == "__main__":
     main()
