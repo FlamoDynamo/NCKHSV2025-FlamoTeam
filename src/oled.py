@@ -323,3 +323,27 @@ class OLEDDisplay(MAX30102):
 
             self.display_data()
             time.sleep(0.1)
+
+def main():
+    i2c_max30102 = I2C(1, scl=Pin(6), sda=Pin(7), freq=400000)
+    i2c_oled = SoftI2C(scl=Pin(2), sda=Pin(0))
+    adc_pin = 4
+    charge_status_pin = 3
+    button1_pin = 18
+    button2_pin = 19
+    button3_pin = 21
+    buzzer_pin = 25
+    
+    microsd = MicroSD(spi_id=1, sck_pin=11, mosi_pin=10, miso_pin=9, cs_pin=8)
+    microsd.mount()
+
+    oled_display = OLEDDisplay(i2c_max30102, i2c_oled, adc_pin, charge_status_pin, button1_pin, button2_pin, button3_pin, buzzer_pin)
+    oled_display.microsd = microsd
+
+    try:
+        oled_display.main_loop()
+    finally:
+        microsd.unmount()
+
+if __name__ == "__main__":
+    main()
