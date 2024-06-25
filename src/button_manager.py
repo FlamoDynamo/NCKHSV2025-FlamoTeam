@@ -1,9 +1,9 @@
-'''# button_manager.py
+# button_manager.py
 
 from machine import Pin
 import time
 
-class ButtonManager:
+'''class ButtonManager:
     def __init__(self, button1_pin, button2_pin, long_press_duration=1.0, double_click_interval=0.3):
         """
         Khởi tạo ButtonManager.
