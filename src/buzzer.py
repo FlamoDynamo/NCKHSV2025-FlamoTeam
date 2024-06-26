@@ -1,40 +1,36 @@
 # buzzer.py
-
-from machine import Pin, PWM
-import time
+from machine import Pin, Timer
 
 class Buzzer:
-    def __init__(self, buzzer_pin):
+    def __init__(self, buzzer_pin=2):
         """
-        Khởi tạo Buzzer.
-
+        Khởi tạo đối tượng Buzzer.
         Args:
-            buzzer_pin (int): Chân GPIO được kết nối với buzzer.
+            buzzer_pin (int, optional): Chân GPIO kết nối với buzzer. Mặc định là D4 (GPIO2).
         """
         self.buzzer = Pin(buzzer_pin, Pin.OUT)
-        self.pwm = PWM(self.buzzer)
-        self.pwm.duty(0)  # Tắt buzzer ban đầu
+        self.timer = Timer(-1)  # Sử dụng timer ảo
+        self.is_on = False
 
-    def beep(self, frequency=440, duration=0.2, duty_cycle=512):
+    def on(self):
         """
-        Phát ra âm thanh bíp.
+        Bật buzzer.
+        """
+        self.is_on = True
+        self.buzzer.on()
 
+    def off(self):
+        """
+        Tắt buzzer.
+        """
+        self.is_on = False
+        self.buzzer.off()
+
+    def beep(self, duration=100):  # Thời gian beep mặc định là 100ms
+        """
+        Phát ra tiếng bíp trong một khoảng thời gian.
         Args:
-            frequency (int, optional): Tần số âm thanh (Hz). Mặc định là 440 Hz.
-            duration (float, optional): Thời gian phát âm thanh (giây). Mặc định là 0.2 giây.
-            duty_cycle (int, optional): Duty cycle của PWM (0-1023). Mặc định là 512 (50%).
+            duration (int, optional): Thời gian bíp (ms). Mặc định là 100ms.
         """
-        self.pwm.freq(frequency)
-        self.pwm.duty(duty_cycle)  # Thiết lập duty cycle
-        time.sleep(duration)
-        self.pwm.duty(0)  # Tắt buzzer
-
-    def long_beep(self, frequency=440, duration=0.5):
-        """
-        Phát ra âm thanh bíp dài hơn.
-
-        Args:
-            frequency (int, optional): Tần số âm thanh (Hz). Mặc định là 440 Hz.
-            duration (float, optional): Thời gian phát âm thanh (giây). Mặc định là 0.5 giây.
-        """
-        self.beep(frequency, duration)
+        self.on()
+        self.timer.init(period=duration, mode=Timer.ONE_SHOT, callback=lambda t: self.off())
