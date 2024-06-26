@@ -1,15 +1,13 @@
 # battery_and_charge.py
-
 from machine import Pin, ADC
 import time
 
 class BatteryCharge:
-    def __init__(self, adc_pin, battery_voltage=3.7, resistor_divider=2):
+    def __init__(self, adc_pin=0, battery_voltage=3.7, resistor_divider=2):
         """
         Khởi tạo module BatteryCharge.
-
         Args:
-            adc_pin (int): Chân ADC được kết nối với pin đo điện áp.
+            adc_pin (int, optional): Chân ADC được kết nối với pin đo điện áp. Mặc định là 0 (A0).
             battery_voltage (float, optional): Điện áp của pin khi đầy. Mặc định là 3.7V.
             resistor_divider (int, optional): Tỉ số của bộ chia điện áp (nếu có). Mặc định là 2.
         """
@@ -21,18 +19,16 @@ class BatteryCharge:
     def read_voltage(self):
         """
         Đọc giá trị điện áp từ pin.
-
         Returns:
             float: Điện áp của pin (V).
         """
         adc_value = self.adc.read()
-        voltage = adc_value * (3.3 / 4095) * self.resistor_divider  # Chuyển đổi ADC sang V
+        voltage = adc_value * (3.3 / 1023) * self.resistor_divider  # Chuyển đổi ADC sang V
         return voltage
 
     def read_percentage(self):
         """
         Đọc phần trăm pin còn lại.
-
         Returns:
             int: Phần trăm pin còn lại (%).
         """
@@ -43,10 +39,8 @@ class BatteryCharge:
     def is_charging(self, charge_status_pin):
         """
         Kiểm tra xem pin có đang được sạc hay không.
-
         Args:
             charge_status_pin (int): Chân GPIO được kết nối với chân báo sạc của module TP4056.
-
         Returns:
             bool: True nếu đang sạc, False nếu không sạc.
         """
