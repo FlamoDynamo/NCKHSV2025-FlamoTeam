@@ -1,16 +1,19 @@
-'''# oled.py
-
-from machine import I2C, Pin, SoftI2C
+# oled.py
+'''from machine import Pin, SoftI2C
+from ssd1306 import SSD1306_I2C
+from writer import Writer, CWriter
+from font8 import font8
 import time
-import ssd1306
-from max30102 import MAX30102
-from battery_and_charge import BatteryCharge
-from microsd import MicroSD
-from button_manager import ButtonManager
-from history_manager import HistoryManager
-from buzzer import Buzzer
+import max30102
+from microsd import MicroSD'''
 
-class OLEDDisplay(MAX30102):
+from machine import Pin, SoftI2C
+from ssd1306 import SSD1306_I2C
+from writer import Writer, CWriter
+from font8 import font8
+import time
+
+'''class OLEDDisplay(MAX30102):
     def __init__(self, i2c_max30102, i2c_oled, adc_pin, charge_status_pin, button1_pin, button2_pin, buzzer_pin, oled_width=128, oled_height=64):
         super().__init__(i2c_max30102)
         self.oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c_oled)
@@ -197,14 +200,13 @@ def main():
 if __name__ == "__main__":
     main()'''
 
-class OLEDDisplay(MAX30102):
-    def __init__(self, i2c_max30102, i2c_oled, adc_pin, charge_status_pin, button1_pin, button2_pin, button3_pin, buzzer_pin, oled_width=128, oled_height=64):
-        super().__init__(i2c_max30102)
-        self.oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c_oled)
-        self.battery_charge = BatteryCharge(adc_pin, charge_status_pin=charge_status_pin)
-        self.button_manager = ButtonManager(button1_pin, button2_pin, button3_pin)
-        self.history_manager = HistoryManager()
-        self.buzzer = Buzzer(buzzer_pin)
+class OLEDDisplay:
+    def __init__(self, i2c_oled, oled_width=128, oled_height=64, microsd=None):
+        self.oled = SSD1306_I2C(oled_width, oled_height, i2c_oled, addr=0x3c)
+        self.oled.init_display()
+        self.writer = Writer(self.oled, font8)
+        self.cwriter = CWriter(self.oled, font8)
+        self.microsd = microsd
 
         self.data_buffer = deque(maxlen=oled_width)
         self.current_mode = "measurement"
@@ -214,136 +216,72 @@ class OLEDDisplay(MAX30102):
         self.is_measuring = False
         self.alert_sound_enabled = True
 
-        self.button_manager.set_callbacks(1, self.on_button1_press, self.on_button1_long_press, self.on_button1_double_click)
-        self.button_manager.set_callbacks(2, self.on_button2_press, self.on_button2_long_press)
-        self.button_manager.set_callbacks(3, self.on_button3_press, self.on_button3_long_press, self.on_button3_double_click)
-
         self.hr = 0
         self.spo2 = 0
         self.nn_hr = 0
 
-    def on_button1_press(self):
-        if self.current_mode == "measurement":
-            self.display_mode = "graph" if self.display_mode == "numerical" else "numerical"
-
-    def on_button1_long_press(self):
-        if self.current_mode == "measurement":
-            if self.is_measuring:
-                self.stop_measurement()
-            else:
-                self.start_measurement()
-
-    def on_button1_double_click(self):
-        if self.current_mode == "measurement" and not self.is_measuring:
-            self.save_current_data()
-
-    def on_button2_press(self):
-        if self.current_mode == "history":
-            self.history_page_index = max(0, self.history_page_index - 1)
-
-    def on_button2_long_press(self):
-        if self.current_mode == "measurement":
-            modes = ["both", "hr", "spo2"]
-            self.measurement_mode = modes[(modes.index(self.measurement_mode) + 1) % len(modes)]
-
-    def on_button3_press(self):
-        if self.current_mode == "history":
-            self.history_page_index = min(self.history_manager.get_history_length() - 1, self.history_page_index + 1)
-        else:
-            self.current_mode = "history" if self.current_mode == "measurement" else "measurement"
-
-    def on_button3_long_press(self):
-        self.alert_sound_enabled = not self.alert_sound_enabled
-
-    def on_button3_double_click(self):
-        if self.current_mode == "measurement":
-            self.save_current_data()
-
-    def save_current_data(self):
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        self.save_data('sensor_data.csv', [self.hr, self.spo2, self.nn_hr], timestamp)
-
-    def display_data(self):
+    def clear(self):
         self.oled.fill(0)
-
-        if self.current_mode == "measurement":
-            if self.is_measuring:
-                if self.display_mode == "graph":
-                    self.display_graph_data()
-                else:
-                    self.display_numerical_data()
-        elif self.current_mode == "history":
-            self.display_history_data()
-
-        self.display_battery_info()
         self.oled.show()
 
-    def display_numerical_data(self):
-        if self.measurement_mode in ["both", "hr"]:
-            self.oled.text("HR: {}".format(self.hr), 0, 0)
-        if self.measurement_mode in ["both", "spo2"]:
-            self.oled.text("SpO2: {}".format(self.spo2), 0, 10)
-        self.oled.text("NN HR: {}".format(self.nn_hr), 0, 20)
+    def display_text(self, text, x, y):
+        self.writer.set_textpos(self.oled, x, y)
+        self.writer.printstring(text)
+        self.oled.show()
 
-    def display_graph_data(self):
-        # Implementation remains the same
+    def display_data(self, hr, spo2, nn_hr):
+        self.oled.fill(0)
+        if self.display_mode == "graph":
+            self.display_graph_data(hr, spo2)
+        else:
+            self.display_numerical_data(hr, spo2, nn_hr)
+        self.oled.show()
 
-    def display_history_data(self):
-        # Implementation remains the same
-
-    def display_battery_info(self):
-        # Implementation remains the same
-
-    def check_alerts(self):
-        if not self.alert_sound_enabled:
-            return
-
-        if self.hr < 40 or self.hr > 120:
-            self.buzzer.beep()
-        if self.spo2 < 90:
-            self.buzzer.beep(duty_cycle=768)
-        elif self.spo2 < 92 and self.hr < 40:
-            self.buzzer.beep()
-        elif self.spo2 < 95 and self.hr >= 40:
-            self.buzzer.beep()
-
-    def main_loop(self):
-        while True:
-            self.button_manager.check_events()
-
-            if self.current_mode == "measurement" and self.is_measuring:
-                data = self.read_sensor()
-                if len(self.ir_buffer) >= 100:
-                    self.hr = self.calculate_heart_rate()
-                    self.spo2 = self.calculate_spo2()
-                    self.nn_hr = self.predict_heart_rate([data['red'], data['ir']])
-                    self.check_alerts()
-                    self.red_buffer = []
-                    self.ir_buffer = []
-
-            self.display_data()
-            time.sleep(0.1)
+    def display_history_data(self, history_manager):
+        self.oled.fill(0)
+        if history_manager.get_history_length() == 0:
+            self.display_text("No history yet", 0, 0)
+        else:
+            record = history_manager.get_record(self.history_page_index)
+            self.display_text(f"Record {self.history_page_index + 1}/{history_manager.get_history_length()}", 0, 0)
+            self.display_text(f"Time: {record['timestamp']}", 0, 10)
+            self.display_text(f"HR: {record['hr']}, SpO2: {record['spo2']}", 0, 20)
+        self.oled.show()
 
 def main():
-    i2c_max30102 = I2C(1, scl=Pin(6), sda=Pin(7), freq=400000)
-    i2c_oled = SoftI2C(scl=Pin(2), sda=Pin(0))
-    adc_pin = 4
-    charge_status_pin = 3
-    button1_pin = 18
-    button2_pin = 19
-    button3_pin = 21
-    buzzer_pin = 25
-    
-    microsd = MicroSD(spi_id=1, sck_pin=11, mosi_pin=10, miso_pin=9, cs_pin=8)
+    i2c_max30102 = I2C(0, scl=Pin(5), sda=Pin(4), freq=400000)  # I2C bus cho MAX30102
+    i2c_oled = SoftI2C(scl=Pin(14), sda=Pin(12))  # SoftI2C bus cho OLED
+    max30102_sensor = max30102.MAX30102(i2c_max30102)
+    microsd = MicroSD(spi_id=1, sck_pin=14, mosi_pin=13, miso_pin=12, cs_pin=15)
     microsd.mount()
+    oled_display = OLEDDisplay(i2c_oled, microsd=microsd)
+    battery_charge = BatteryCharge(adc_pin=0)
+    button_manager = ButtonManager()
+    history_manager = HistoryManager()
+    buzzer = Buzzer()
 
-    oled_display = OLEDDisplay(i2c_max30102, i2c_oled, adc_pin, charge_status_pin, button1_pin, button2_pin, button3_pin, buzzer_pin)
-    oled_display.microsd = microsd
+    while True:
+        button_states = button_manager.check_button_press()
 
-    try:
-        oled_display.main_loop()
-    finally:
-        microsd.unmount()
+        if button_states[0]:  # Nút 1 được nhấn
+            oled_display.display_mode = "graph" if oled_display.display_mode == "numerical" else "numerical"
+        elif button_states[1]:  # Nút 2 được nhấn
+            oled_display.current_mode = "history" if oled_display.current_mode == "measurement" else "measurement"
+        elif button_states[2]:  # Nút 3 được nhấn
+            # Chức năng của nút 3 (tạm thời chưa có)
+            pass
+
+        if oled_display.current_mode == "measurement":
+            data = max30102_sensor.read_sensor()
+            oled_display.display_data(data['hr'], data['spo2'], data['nn_hr'])
+        elif oled_display.current_mode == "history":
+            oled_display.display_history_data(history_manager)
+
+        # Hiển thị thông tin pin
+        battery_percentage = battery_charge.read_percentage()
+        oled_display.display_text(f"Battery: {battery_percentage}%", 0, 54)  # Hiển thị ở dòng cuối cùng
+
+        time.sleep(0.1)
 
 if __name__ == "__main__":
     main()
