@@ -7,11 +7,22 @@ import time
 import max30102
 from microsd import MicroSD'''
 
+# oled.py (phần import)
+
 from machine import Pin, SoftI2C
 from ssd1306 import SSD1306_I2C
 from writer import Writer, CWriter
 from font8 import font8
 import time
+from collections import deque
+
+# Các module khác cần thiết
+import max30102
+from microsd import MicroSD
+from battery_and_charge import BatteryCharge
+from button_manager import ButtonManager
+from buzzer import Buzzer
+from history_manager import HistoryManager
 
 '''class OLEDDisplay(MAX30102):
     def __init__(self, i2c_max30102, i2c_oled, adc_pin, charge_status_pin, button1_pin, button2_pin, buzzer_pin, oled_width=128, oled_height=64):
