@@ -1,12 +1,12 @@
 # max30102.py
-
 from machine import I2C, Pin
 import time
 import numpy as np
 import csv
 import joblib
 from microsd import MicroSD
-from scipy.signal import wiener  # Import hàm lọc Wiener
+from scipy.signal import wiener # Import hàm lọc Wiener
+from machine import SoftI2C
 
 class MAX30102:
     def __init__(self, i2c, addr=0x57, microsd=None):
@@ -46,7 +46,7 @@ class MAX30102:
         self.nn_model = joblib.load('nn_model.pkl')
 
     def read_fifo(self):
-        fifo_data = self.read_reg(0x07, 6)  # Read 6 bytes from FIFO_DATA
+        fifo_data = self.read_reg(0x07, 6) # Read 6 bytes from FIFO_DATA
         red = (fifo_data[0] << 16) | (fifo_data[1] << 8) | fifo_data[2]
         ir = (fifo_data[3] << 16) | (fifo_data[4] << 8) | fifo_data[5]
         return red, ir
@@ -57,7 +57,6 @@ class MAX30102:
         # Áp dụng lọc Wiener
         red_filtered = wiener(red)
         ir_filtered = wiener(ir)
-
         self.red_buffer.append(red_filtered)
         self.ir_buffer.append(ir_filtered)
         return {'red': red_filtered, 'ir': ir_filtered}
