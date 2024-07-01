@@ -3,13 +3,14 @@ from machine import Pin
 import time
 
 class ButtonManager:
-    def __init__(self, button1_pin=0, button2_pin=3, button3_pin=1, long_press_duration=2000):
+    def __init__(self, button1_pin=0, button2_pin=2, button3_pin=13, long_press_duration=2000): # Sửa chân nút nhấn
         """
         Khởi tạo ButtonManager.
+
         Args:
             button1_pin (int, optional): Chân GPIO của nút nhấn 1. Mặc định là D3 (GPIO0).
-            button2_pin (int, optional): Chân GPIO của nút nhấn 2. Mặc định là RX (GPIO3).
-            button3_pin (int, optional): Chân GPIO của nút nhấn 3. Mặc định là TX (GPIO1).
+            button2_pin (int, optional): Chân GPIO của nút nhấn 2. Mặc định là D4 (GPIO2).
+            button3_pin (int, optional): Chân GPIO của nút nhấn 3. Mặc định là RX (GPIO3).
             long_press_duration (int, optional): Thời gian (ms) để coi là nhấn giữ. Mặc định là 2000ms.
         """
         self.buttons = [
