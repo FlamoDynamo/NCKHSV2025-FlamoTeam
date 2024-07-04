@@ -3,7 +3,11 @@ from machine import Pin, ADC
 import time
 
 class BatteryCharge:
-    def __init__(self, adc_pin=0, battery_voltage=3.7, resistor_divider=2):
+    def __init__(self, adc_pin=0, battery_voltage=4.2, resistor_divider=1):
+        """
+        old: 
+            self, adc_pin=0, battery_voltage=4.2, resistor_divider=1
+        """
         """
         Khởi tạo module BatteryCharge.
         Args:
