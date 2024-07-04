@@ -3,7 +3,7 @@ from machine import Pin
 import time
 
 class ButtonManager:
-    def __init__(self, button1_pin=0, button2_pin=3, button3_pin=1, long_press_duration=2000):
+    def __init__(self, button1_pin=0, button2_pin=2, button3_pin=3, long_press_duration=2000):
         """
         Khởi tạo ButtonManager.
         Args:
