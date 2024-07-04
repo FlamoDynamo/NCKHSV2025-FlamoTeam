@@ -276,11 +276,17 @@ def main():
 
         if button_states[0]:  # Nút 1 được nhấn
             oled_display.display_mode = "graph" if oled_display.display_mode == "numerical" else "numerical"
+
         elif button_states[1]:  # Nút 2 được nhấn
-            oled_display.current_mode = "history" if oled_display.current_mode == "measurement" else "measurement"
+            if oled_display.current_mode == "measurement":
+                oled_display.current_mode = "history"
+                oled_display.history_page_index = 0  # Đặt lại chỉ số trang khi chuyển sang chế độ lịch sử
+            elif oled_display.current_mode == "history":
+                oled_display.history_page_index = max(0, oled_display.history_page_index - 1)  # Di chuyển lên
+
         elif button_states[2]:  # Nút 3 được nhấn
-            # Chức năng của nút 3 (tạm thời chưa có)
-            pass
+            if oled_display.current_mode == "history":
+                oled_display.history_page_index = min(oled_display.history_page_index + 1, history_manager.get_history_length() - 1)  # Di chuyển xuống
 
         if oled_display.current_mode == "measurement":
             data = max30102_sensor.read_sensor()
