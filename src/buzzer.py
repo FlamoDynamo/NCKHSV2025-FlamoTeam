@@ -2,7 +2,7 @@
 from machine import Pin, Timer
 
 class Buzzer:
-    def __init__(self, buzzer_pin=2):
+    def __init__(self, buzzer_pin=15):
         """
         Khởi tạo đối tượng Buzzer.
         Args:
